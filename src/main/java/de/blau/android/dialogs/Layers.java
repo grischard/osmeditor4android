@@ -82,7 +82,9 @@ public class Layers extends SizedFixedImmersiveDialogFragment {
     private int zoomToExtentId;
     private int menuId;
 
-    TableLayout tl;
+    private TableLayout tl;
+    
+    private Map map;
 
     /**
      * Show an info dialog for the supplied GeoJSON Feature
@@ -130,6 +132,7 @@ public class Layers extends SizedFixedImmersiveDialogFragment {
     public AppCompatDialog onCreateDialog(Bundle savedInstanceState) {
         AppCompatDialog dialog = new AppCompatDialog(getActivity());
         View layout = createView(null);
+        map = App.getLogic().getMap();
         // ideally the following code would be included in the layer classes, but no brilliant ideas on how to do this
         // right now
         final FloatingActionButton add = (FloatingActionButton) layout.findViewById(R.id.add);
@@ -169,6 +172,7 @@ public class Layers extends SizedFixedImmersiveDialogFragment {
                                         if (geojsonLayer.loadGeoJsonFile(activity, fileUri)) {
                                             SelectFile.savePref(prefs, R.string.config_osmPreferredDir_key, fileUri);
                                             geojsonLayer.invalidate();
+                                            map.invalidate();
                                             LayerStyle.showDialog(activity, geojsonLayer.getIndex());
                                             tl.removeAllViews();
                                             addRows(activity);
@@ -355,6 +359,7 @@ public class Layers extends SizedFixedImmersiveDialogFragment {
                     layer.setVisible(!layer.isVisible());
                     visible.setImageResource(layer.isVisible() ? visibleId : invisibleId);
                     layer.invalidate();
+                    map.invalidate();
                 }
             }
         });
@@ -448,7 +453,6 @@ public class Layers extends SizedFixedImmersiveDialogFragment {
         public void onClick(View arg0) {
             final FragmentActivity activity = getActivity();
             PopupMenu popup = new PopupMenu(activity, button);
-
             if (layer instanceof MapTilesLayer) { // maybe we should use an interface here
                 // get MRU list from layer
                 final String[] tileServerIds = ((MapTilesLayer) layer).getMRU();
@@ -467,6 +471,7 @@ public class Layers extends SizedFixedImmersiveDialogFragment {
                                         setNewImagery(activity, row, (MapTilesLayer) layer, tileServer);
                                         dismissDialog();
                                         layer.invalidate();
+                                        map.invalidate();
                                     }
                                     return true;
                                 }
@@ -501,6 +506,7 @@ public class Layers extends SizedFixedImmersiveDialogFragment {
                                         public void update() {
                                             if (layer != null) {
                                                 layer.invalidate();
+                                                map.invalidate();
                                                 dismissDialog();
                                             }
                                         }
@@ -517,6 +523,7 @@ public class Layers extends SizedFixedImmersiveDialogFragment {
                         if (layer != null) {
                             ((MapTilesLayer) layer).flushTileCache(activity);
                             layer.invalidate();
+                            map.invalidate();
                         }
                         return true;
                     }

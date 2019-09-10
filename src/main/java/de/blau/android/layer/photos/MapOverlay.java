@@ -247,7 +247,7 @@ public class MapOverlay extends MapViewLayer implements DisableInterface, Clicka
 
     @Override
     public void invalidate() {
-        map.invalidate();
+        // do nothing
     }
 
     @Override
@@ -284,7 +284,7 @@ public class MapOverlay extends MapViewLayer implements DisableInterface, Clicka
                     Util.startExternalPhotoViewer(context, photoUri);
                 }
                 selected = photo;
-                invalidate();
+                map.invalidate();
             } else {
                 Snack.toastTopError(context, resources.getString(R.string.toast_error_accessing_photo, photo.getRef()));
             }

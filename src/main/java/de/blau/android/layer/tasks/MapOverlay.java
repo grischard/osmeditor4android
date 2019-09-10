@@ -61,6 +61,9 @@ public class MapOverlay extends MapViewLayer implements ExtentInterface, Disable
     private transient ReentrantLock readingLock = new ReentrantLock();
 
     private transient SavingHelper<Task> savingHelper = new SavingHelper<>();
+    
+    // cached results for the current boundingbox
+    private transient List<Task> taskList = null;  
 
     private Task selected = null;
 
@@ -125,7 +128,7 @@ public class MapOverlay extends MapViewLayer implements ExtentInterface, Disable
 
                             @Override
                             public void onSuccess() {
-                                invalidate();
+                                map.invalidate();
                             }
 
                             @Override
@@ -159,33 +162,30 @@ public class MapOverlay extends MapViewLayer implements ExtentInterface, Disable
             //
             int w = map.getWidth();
             int h = map.getHeight();
-            List<Task> taskList = tasks.getTasks(bb);
-            if (taskList != null) {
-                Set<String> taskFilter = map.getPrefs().taskFilter();
-                for (Task t : taskList) {
-                    // filter
-                    if (!taskFilter.contains(t.bugFilterKey())) {
-                        continue;
+            taskList = taskList == null ? tasks.getTasks(bb) : taskList;
+            Set<String> taskFilter = map.getPrefs().taskFilter();
+            for (Task t : taskList) {
+                // filter
+                if (!taskFilter.contains(t.bugFilterKey())) {
+                    continue;
+                }
+                float x = GeoMath.lonE7ToX(w, bb, t.getLon());
+                float y = GeoMath.latE7ToY(h, w, bb, t.getLat());
+                boolean isSelected = selected != null && t.equals(selected) && App.getLogic().isInEditZoomRange();
+                if (isSelected) {
+                    // if the task can be dragged and large drag area is turned on show the large drag area
+                    if (t instanceof Note && ((Note) t).isNew() && map.getPrefs().largeDragArea()) {
+                        c.drawCircle(x, y, DataStyle.getCurrent().getLargDragToleranceRadius(), DataStyle.getInternal(DataStyle.NODE_DRAG_RADIUS).getPaint());
                     }
-                    float x = GeoMath.lonE7ToX(w, bb, t.getLon());
-                    float y = GeoMath.latE7ToY(h, w, bb, t.getLat());
-                    boolean isSelected = selected != null && t.equals(selected) && App.getLogic().isInEditZoomRange();
-                    if (isSelected) {
-                        // if the task can be dragged and large drag area is turned on show the large drag area
-                        if (t instanceof Note && ((Note) t).isNew() && map.getPrefs().largeDragArea()) {
-                            c.drawCircle(x, y, DataStyle.getCurrent().getLargDragToleranceRadius(),
-                                    DataStyle.getInternal(DataStyle.NODE_DRAG_RADIUS).getPaint());
-                        }
-                    }
-                    if (t.isClosed() && t.hasBeenChanged()) {
-                        t.drawBitmapChangedClosed(map.getContext(), c, x, y, isSelected);
-                    } else if (t.isClosed()) {
-                        t.drawBitmapClosed(map.getContext(), c, x, y, isSelected);
-                    } else if (t.isNew() || t.hasBeenChanged()) {
-                        t.drawBitmapChanged(map.getContext(), c, x, y, isSelected);
-                    } else {
-                        t.drawBitmapOpen(map.getContext(), c, x, y, isSelected);
-                    }
+                }
+                if (t.isClosed() && t.hasBeenChanged()) {
+                    t.drawBitmapChangedClosed(map.getContext(), c, x, y, isSelected);
+                } else if (t.isClosed()) {
+                    t.drawBitmapClosed(map.getContext(), c, x, y, isSelected);
+                } else if (t.isNew() || t.hasBeenChanged()) {
+                    t.drawBitmapChanged(map.getContext(), c, x, y, isSelected);
+                } else {
+                    t.drawBitmapOpen(map.getContext(), c, x, y, isSelected);
                 }
             }
         }
@@ -231,7 +231,7 @@ public class MapOverlay extends MapViewLayer implements ExtentInterface, Disable
 
     @Override
     public void invalidate() {
-        map.invalidate();
+        taskList = null;
     }
 
     @Override
